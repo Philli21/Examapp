@@ -1,4 +1,4 @@
-import { getQuestions, getQuestionCount } from './questionService';
+import { getQuestions, getQuestionCount, getQuestionsWithOptions } from './questionService';
 import { isSharedSubject } from '@/src/core/config/constants';
 
 type TestCase = {
@@ -73,5 +73,79 @@ export async function runQuestionServiceTests(): Promise<void> {
     console.error('[QSTest] SOME TESTS FAILED');
   } else {
     console.log('[QSTest] ALL TESTS PASSED');
+  }
+}
+
+export async function runRendererTests(): Promise<void> {
+  console.log('[RendererTest] ========== Renderer Test Suite ==========');
+
+  const filters: Array<{ label: string; stream: 'natural' | 'social'; subject: string; year: number; chapter: number }> = [
+    { label: 'Physics+Ch1 (natural LaTeX)', stream: 'natural', subject: 'Physics', year: 2017, chapter: 1 },
+    { label: 'Maths Natural+Ch6 (calculus LaTeX)', stream: 'natural', subject: 'Maths Natural', year: 2017, chapter: 6 },
+    { label: 'English+Ch9 (no LaTeX)', stream: 'natural', subject: 'English', year: 2017, chapter: 9 },
+    { label: 'Aptitude+Ch13 (shared)', stream: 'social', subject: 'Aptitude', year: 2017, chapter: 13 },
+    { label: 'Biology+Ch6 (genetics)', stream: 'natural', subject: 'Biology', year: 2017, chapter: 6 },
+    { label: 'History+Ch4 (Zagwe)', stream: 'social', subject: 'History', year: 2017, chapter: 4 },
+  ];
+
+  let passed = 0;
+  let failed = 0;
+
+  for (const f of filters) {
+    console.log(`[RendererTest] --- ${f.label} ---`);
+
+    const questions = await getQuestionsWithOptions({ ...f });
+    const q = questions[0];
+
+    if (!q) {
+      console.error(`[RendererTest]   FAIL: no question found`);
+      failed++;
+      continue;
+    }
+
+    const hasLatex = q.question_text.includes('\\(');
+    console.log(`[RendererTest]   LaTeX in question: ${hasLatex ? 'YES' : 'NO (expected)'}`);
+    console.log(`[RendererTest]   Options count: ${q.options?.length ?? 0}`);
+
+    let optionChecks = 0;
+    if (q.options?.length !== 4) {
+      console.error(`[RendererTest]   FAIL: expected 4 options, got ${q.options?.length ?? 0}`);
+      failed++;
+      continue;
+    }
+
+    const correctCount = q.options.filter((o) => o.is_correct === 1).length;
+    if (correctCount !== 1) {
+      console.error(`[RendererTest]   FAIL: expected 1 correct option, got ${correctCount}`);
+      failed++;
+      continue;
+    }
+
+    const hasOptionLatex = q.options.some((o) => o.option_text.includes('\\('));
+    console.log(`[RendererTest]   LaTeX in options: ${hasOptionLatex ? 'YES' : 'NO'}`);
+    console.log(`[RendererTest]   Correct option: ${q.options.find((o) => o.is_correct === 1)?.label}`);
+
+    const images = JSON.parse(q.question_images_json);
+    console.log(`[RendererTest]   Images: ${images.length} (${images.length === 0 ? 'none — seed uses empty array' : 'present'})`);
+
+    const hasExplanation = q.explanation_text !== null && q.explanation_text.length > 0;
+    console.log(`[RendererTest]   Explanation: ${hasExplanation ? 'present' : 'missing'}`);
+
+    if (hasExplanation) {
+      const explHasLatex = q.explanation_text!.includes('\\(');
+      console.log(`[RendererTest]   LaTeX in explanation: ${explHasLatex ? 'YES' : 'NO'}`);
+    }
+
+    console.log(`[RendererTest]   PASS`);
+    passed++;
+  }
+
+  console.log('[RendererTest] ========== SUMMARY ==========');
+  console.log(`[RendererTest]   Passed: ${passed}, Failed: ${failed}`);
+
+  if (failed > 0) {
+    console.error('[RendererTest] SOME TESTS FAILED');
+  } else {
+    console.log('[RendererTest] ALL TESTS PASSED');
   }
 }

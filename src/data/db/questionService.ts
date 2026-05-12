@@ -1,6 +1,14 @@
 import { getDatabase } from './dbService';
 import { isSharedSubject } from '@/src/core/config/constants';
 
+export interface Option {
+  id: number;
+  question_id: string;
+  label: string;
+  option_text: string;
+  is_correct: number;
+}
+
 export interface Question {
   id: string;
   grade: number;
@@ -20,6 +28,7 @@ export interface Question {
   tags_json: string;
   package_id: string;
   created_at: string;
+  options?: Option[];
 }
 
 export interface QuestionFilters {
@@ -117,4 +126,36 @@ export async function checkQuestionsExist(filters: QuestionFilters): Promise<boo
   } catch {
     return false;
   }
+}
+
+export async function getQuestionsWithOptions(filters: QuestionFilters): Promise<Question[]> {
+  const questions = await getQuestions(filters);
+  if (questions.length === 0) return questions;
+
+  const db = getDatabase();
+  const ids = questions.map((q) => q.id);
+  const placeholders = ids.map(() => '?').join(', ');
+
+  const result = await db.execute(
+    `SELECT * FROM options WHERE question_id IN (${placeholders}) ORDER BY question_id, label`,
+    ids,
+  );
+
+  const rows = result.rows as Array<Record<string, unknown>>;
+  const optionsMap = new Map<string, Option[]>();
+
+  for (const row of rows) {
+    const option: Option = {
+      id: row.id as number,
+      question_id: row.question_id as string,
+      label: row.label as string,
+      option_text: row.option_text as string,
+      is_correct: row.is_correct as number,
+    };
+    const list = optionsMap.get(option.question_id) ?? [];
+    list.push(option);
+    optionsMap.set(option.question_id, list);
+  }
+
+  return questions.map((q) => ({ ...q, options: optionsMap.get(q.id) ?? [] }));
 }

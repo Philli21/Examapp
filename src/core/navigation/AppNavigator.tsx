@@ -7,7 +7,7 @@ import SubjectPickerScreen from '@/src/features/examNavigator/SubjectPickerScree
 import YearPickerScreen from '@/src/features/examNavigator/YearPickerScreen';
 import ChapterPickerScreen from '@/src/features/examNavigator/ChapterPickerScreen';
 import ReviewScreen from '@/src/features/examNavigator/ReviewScreen';
-import QuizScreen from '@/src/screens/QuizScreen';
+import QuizScreen from '@/src/features/quiz/QuizScreen';
 import ResultsScreen from '@/src/screens/ResultsScreen';
 import NotesScreen from '@/src/screens/NotesScreen';
 import SettingsScreen from '@/src/screens/SettingsScreen';

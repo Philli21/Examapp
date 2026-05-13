@@ -4,6 +4,7 @@ import Katex from 'react-native-katex';
 import { SvgUri } from 'react-native-svg';
 
 import type { Question, Option } from '@/src/data/db/questionService';
+import { parseTextSegments, renderTextWithLatex } from './latexUtils';
 
 interface QuestionRendererProps {
   question: Question;
@@ -17,46 +18,6 @@ interface ImageMeta {
   width?: number;
   height?: number;
   type?: string;
-}
-
-type TextSegment =
-  | { type: 'text'; value: string }
-  | { type: 'math'; value: string };
-
-function parseTextSegments(text: string): TextSegment[] {
-  const segments: TextSegment[] = [];
-  const regex = /\\\((.+?)\\\)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
-    }
-    segments.push({ type: 'math', value: match[1] });
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    segments.push({ type: 'text', value: text.slice(lastIndex) });
-  }
-
-  return segments;
-}
-
-function renderTextWithLatex(segments: TextSegment[]): React.ReactNode[] {
-  return segments.map((seg, i) => {
-    if (seg.type === 'math') {
-      return (
-        <Katex
-          key={i}
-          expression={seg.value}
-          displayMode={false}
-        />
-      );
-    }
-    return <Text key={i}>{seg.value}</Text>;
-  });
 }
 
 export default function QuestionRenderer({
@@ -113,7 +74,9 @@ export default function QuestionRenderer({
         <Text style={styles.questionNumber}>
           {question.subject} · Ch.{question.chapter} · {question.year}
         </Text>
-        <View style={styles.questionTextContainer}>{renderTextWithLatex(segments)}</View>
+        <View style={styles.questionTextContainer}>
+          {renderTextWithLatex(segments, styles.questionText)}
+        </View>
       </View>
 
       {images.length > 0 && (
@@ -147,7 +110,7 @@ export default function QuestionRenderer({
               <Text style={styles.optionLabel}>{option.label}</Text>
             </View>
             <View style={styles.optionTextContainer}>
-              {renderTextWithLatex(parseTextSegments(option.option_text))}
+              {renderTextWithLatex(parseTextSegments(option.option_text), styles.optionText)}
             </View>
           </Pressable>
         ))}
@@ -170,6 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
+    minHeight: 56,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -177,22 +141,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   questionNumber: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#999',
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  questionText: {
+    fontSize: 18,
+    color: '#1A1A1A',
+    lineHeight: 28,
+    marginBottom: 4,
   },
   questionTextContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    // LaTeX and text segments stack vertically
   },
   imageContainer: {
     marginBottom: 16,
     alignItems: 'center',
   },
-  optionsContainer: {
-    gap: 10,
-  },
+  optionsContainer: {},
   optionCard: {
     flexDirection: 'row',
     borderRadius: 10,
@@ -200,6 +166,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
+    marginBottom: 10,
+    minHeight: 52,
   },
   optionDefault: {},
   optionSelected: {
@@ -215,22 +183,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEBEE',
   },
   optionLabelContainer: {
-    width: 44,
+    width: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderRightWidth: 1,
     borderRightColor: '#E0E0E0',
   },
   optionLabel: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
     color: '#333',
   },
   optionTextContainer: {
     flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    padding: 12,
+    padding: 14,
+  },
+  optionText: {
+    fontSize: 17,
+    color: '#1A1A1A',
+    lineHeight: 26,
   },
 });
